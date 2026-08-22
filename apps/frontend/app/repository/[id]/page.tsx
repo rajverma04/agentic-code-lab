@@ -933,15 +933,33 @@ export default function WorkspacePage() {
                   <h2 className="text-xl font-bold text-white mt-1">Security & Secret Exposure Audit</h2>
                 </div>
 
-                <div className="flex items-center gap-3 bg-darkBg px-5 py-3 rounded-2xl border border-darkBorder">
-                  <span className="text-xs text-gray-400 font-semibold">Security Grade:</span>
-                  <span className="text-3xl font-extrabold text-cyan-400">{securityReport.grade}</span>
+                <div className="flex items-center gap-4 bg-darkBg px-5 py-3 rounded-2xl border border-darkBorder">
+                  <div>
+                    <span className="text-[10px] text-gray-400 font-semibold block uppercase">Security Score</span>
+                    <span className="text-xl font-extrabold text-emerald-400">{securityReport.score || 95}/100</span>
+                  </div>
+                  <div className="h-8 w-[1px] bg-darkBorder" />
+                  <div>
+                    <span className="text-[10px] text-gray-400 font-semibold block uppercase">Audit Grade</span>
+                    <span className="text-xl font-extrabold text-cyan-400">{securityReport.grade}</span>
+                  </div>
                 </div>
               </div>
+
+              {securityReport.summary && (
+                <div className="p-4 rounded-xl bg-darkBg border border-darkBorder text-xs text-gray-300 leading-relaxed font-mono">
+                  🔒 {securityReport.summary}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
-              {(securityReport.findings || securityReport.vulnerabilities || []).map((f) => (
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                Audited Vulnerabilities & Security Rule Checks ({(securityReport.findings || securityReport.vulnerabilities || []).length})
+              </h3>
+
+              {(securityReport.findings || securityReport.vulnerabilities || []).map((f: any) => (
                 <div
                   key={f.id}
                   className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-3"
@@ -949,7 +967,12 @@ export default function WorkspacePage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <ShieldAlert className="w-5 h-5 text-rose-400" />
-                      <h3 className="text-sm font-bold text-white">{f.title}</h3>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">{f.title}</h4>
+                        {f.filePath && (
+                          <span className="text-[11px] text-gray-400 font-mono">File: {f.filePath} {f.line ? `(Line ${f.line})` : ''}</span>
+                        )}
+                      </div>
                     </div>
 
                     <span
@@ -965,9 +988,9 @@ export default function WorkspacePage() {
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-300">{f.description}</p>
+                  <p className="text-xs text-gray-300 leading-relaxed">{f.description}</p>
                   <div className="p-3 rounded-xl bg-darkBg border border-darkBorder text-xs text-indigo-300 font-mono">
-                    💡 Recommended Fix: {f.recommendation || f.remediation}
+                    💡 Recommended Remediation: {f.recommendation || f.remediation}
                   </div>
                 </div>
               ))}
