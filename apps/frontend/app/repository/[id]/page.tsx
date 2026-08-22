@@ -410,10 +410,10 @@ export default function WorkspacePage() {
                   <p className="text-xs text-gray-300 font-semibold">{branchDiff.summary}</p>
                   <div className="flex flex-wrap gap-2 text-[11px]">
                     <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded">
-                      +{branchDiff.addedSymbols.length} Symbols Added
+                      +{branchDiff?.addedSymbols?.length || 0} Symbols Added
                     </span>
                     <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded">
-                      -{branchDiff.deletedSymbols.length} Symbols Removed
+                      -{branchDiff?.deletedSymbols?.length || 0} Symbols Removed
                     </span>
                   </div>
                 </div>
@@ -436,7 +436,7 @@ export default function WorkspacePage() {
                       Pattern: {architecture.architecturePattern}
                     </span>
                     <span className="px-3 py-1 rounded-lg bg-darkBg border border-darkBorder text-xs font-semibold text-emerald-400">
-                      {architecture.languages[0] || 'TypeScript'}
+                      {architecture?.languages?.[0] || 'TypeScript'}
                     </span>
                   </div>
                 </div>
