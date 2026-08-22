@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Repository {
+  id                  String   @id @default(uuid())
+  githubUrl           String
+  name                String
+  owner               String
+  defaultBranch       String   @default("main")
+  stars               Int      @default(0)
+  description         String?
+  status              String   @default("PENDING")
+  progressPercentage  Int      @default(0)
+  currentStepMessage  String?
+  fileCount           Int      @default(0)
+  symbolCount         Int      @default(0)
+  chunkCount          Int      @default(0)
+  languageBreakdown   String   @default("{}") // JSON string
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  files               File[]
+  symbols             Symbol[]
+  chunks              CodeChunk[]
+  dependencies        Dependency[]
+  chats               Chat[]
+  analysisResults     AnalysisResult[]
+}
+
+model File {
+  id           String     @id @default(uuid())
+  repositoryId String
+  filePath     String
+  language     String
+  sizeBytes    Int
+  lineCount    Int
+  hash         String
+  type         String     @default("source")
+  createdAt    DateTime   @default(now())
+
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  symbols      Symbol[]
+
+  @@unique([repositoryId, filePath])
+}
+
+model Symbol {
+  id             String     @id @default(uuid())
+  repositoryId   String
+  fileId         String
+  filePath       String
+  name           String
+  type           String
+  startLine      Int
+  endLine        Int
+  docstring      String?
+  signature      String?
+  exported       Boolean    @default(false)
+  callsJson      String     @default("[]")
+  importsJson    String     @default("[]")
+  createdAt      DateTime   @default(now())
+
+  repository     Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  file           File       @relation(fields: [fileId], references: [id], onDelete: Cascade)
+}
+
+model CodeChunk {
+  id           String     @id @default(uuid())
+  repositoryId String
+  filePath     String
+  symbolName   String?
+  symbolType   String?
+  code         String
+  startLine    Int
+  endLine      Int
+  summary      String?
+  depsJson     String     @default("[]")
+  qdrantPointId String?
+  createdAt    DateTime   @default(now())
+
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+}
+
+model Dependency {
+  id           String     @id @default(uuid())
+  repositoryId String
+  sourceFile   String
+  targetFile   String
+  sourceSymbol String?
+  targetSymbol String?
+  edgeType     String
+  createdAt    DateTime   @default(now())
+
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+}
+
+model Chat {
+  id           String     @id @default(uuid())
+  repositoryId String
+  title        String     @default("Codebase Q&A")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  messages     ChatMessage[]
+}
+
+model ChatMessage {
+  id         String   @id @default(uuid())
+  chatId     String
+  sender     String
+  content    String
+  sourcesJson String  @default("[]")
+  flowJson   String   @default("[]")
+  createdAt  DateTime @default(now())
+
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+}
+
+model AnalysisResult {
+  id           String     @id @default(uuid())
+  repositoryId String
+  analysisType String     // 'architecture', 'health', 'impact', 'doc'
+  resultJson   String
+  createdAt    DateTime   @default(now())
+
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+}

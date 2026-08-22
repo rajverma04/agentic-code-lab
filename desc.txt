@@ -1,0 +1,87 @@
+===============================================================================
+                       VOCALLAB - PROJECT PRESENTATION GUIDE
+===============================================================================
+
+1. PROJECT OVERVIEW (WHAT IS VOCALLAB?)
+-------------------------------------------------------------------------------
+vocallab is an AI-powered Intelligent Codebase Analyzer and Developer Assistant. 
+It acts like a senior software architect that instantly understands any GitHub 
+repository, visualizes its architecture in interactive 2D/3D graphs, answers 
+technical questions, scans for security bugs, and even automatically edits code 
+and creates GitHub Pull Requests.
+
+The Core Problem It Solves:
+Developers and team leaders waste hours reading unfamiliar codebases, finding 
+where APIs are defined, checking for security flaws, and worrying about breaking 
+other files when refactoring code. vocallab solves this by automating codebase 
+understanding, risk assessment, and code refactoring in seconds.
+
+-------------------------------------------------------------------------------
+2. TECH STACK USED & WHY CHOSEN
+-------------------------------------------------------------------------------
+A. FRONTEND:
+   - Next.js 14 (App Router) + React 18:
+     * Why: Provides fast page loads, clean component architecture, and server-side rendering.
+   - Tailwind CSS (Dark Glassmorphism UI):
+     * Why: Gives a modern, premium, dark-themed visual experience for developer dashboards.
+   - React Flow:
+     * Why: Used to render interactive, draggable 2D/3D Architecture Graphs with color-coded nodes and glowing dependency connection lines.
+   - Monaco Code Editor (VS Code in Browser):
+     * Why: Enables users to inspect and view modified source code files with full syntax highlighting right in the web browser.
+
+B. BACKEND & PARSING:
+   - Node.js + Express.js + TypeScript:
+     * Why: Handles heavy async I/O operations (cloning repos, scanning files, running AI agents) with strict type safety.
+   - ts-morph & RegEx AST Scanners:
+     * Why: Parses TypeScript and JavaScript source code to extract exact function definitions, class structures, ES6 imports, and CommonJS require(...) calls accurately.
+
+C. DATABASE & VECTOR SEARCH:
+   - Prisma ORM + SQLite / PostgreSQL:
+     * Why: Stores structured metadata about repositories, indexed file lists, AST symbols, and analysis history cleanly.
+   - Qdrant Vector Database:
+     * Why: Stores high-dimensional vector embeddings of code blocks, allowing the AI to search code semantically (by meaning) rather than simple text search.
+
+D. AI REASONING ENGINE:
+   - Groq Cloud API (Qwen 3.6 27B Model) / Alibaba DashScope / OpenAI GPT-4o:
+     * Why: Groq Cloud delivers sub-second, lightning-fast AI responses with zero local disk space usage and zero cost.
+
+-------------------------------------------------------------------------------
+3. AI AGENTS BUILT, THEIR ROLES & WHY THEY WERE CREATED
+-------------------------------------------------------------------------------
+
+🤖 AGENT 1: RAG Code Architecture Chat Assistant
+   - Role: Answers developer questions about codebase logic, routing, entry points, and data models using exact code context.
+   - Why Created: Helps new team members onboard instantly into a new codebase without having to disturb senior developers.
+
+🤖 AGENT 2: Automatic Code Refactoring & Change Planner Agent
+   - Role: Takes natural language editing requests (e.g. "replace JWT with cookie authentication"), rewrites the source code, saves changes directly to disk, and gives a concise 2-bullet summary.
+   - Why Created: Saves developers hours of manual coding and eliminates copy-pasting code diffs back and forth.
+
+🤖 AGENT 3: Automated GitHub Pull Request Agent
+   - Role: Automatically creates an isolated Git branch and submits a live Pull Request directly to the user's GitHub repository.
+   - Why Created: Automates the entire workflow from AI code generation all the way to version control submission.
+
+🤖 AGENT 4: AI Security & Vulnerability Auditor Agent
+   - Role: Audits code for hardcoded API keys/secrets, SQL injection risks, CORS gaps, and unhandled promise rejections, assigning an overall Security Grade (A+ to F).
+   - Why Created: Prevents security vulnerabilities and leaked credentials from ever reaching production servers.
+
+🤖 AGENT 5: Code Impact & Blast Radius Assessment Agent
+   - Role: Calculates which files, API endpoints, and UI components will be affected if a specific function or module is changed, assigning a Refactoring Risk Rating (LOW, MEDIUM, HIGH, CRITICAL).
+   - Why Created: Prevents developers from accidentally breaking downstream components or API routes when changing core code.
+
+🤖 AGENT 6: OpenAPI 3.0 & Markdown Documentation Generator Agent
+   - Role: Scans route handlers, request parameters, and database schemas to auto-generate valid OpenAPI 3.0 specs and Markdown documentation.
+   - Why Created: Keeps API documentation 100% up-to-date automatically without manual documentation writing.
+
+🤖 AGENT 7: Branch-vs-Branch Architecture Comparison Agent
+   - Role: Compares base vs feature branches (e.g., main vs feature/proposed) to highlight newly added or deleted AST symbols and architectural drift.
+   - Why Created: Gives code reviewers full visibility into structural changes before merging code into production.
+
+-------------------------------------------------------------------------------
+4. QUICK PRESENTATION TALKING POINTS (KEY HIGHLIGHTS FOR SLIDES)
+-------------------------------------------------------------------------------
+1. Full Lifecycle Code Intelligence: From visualization (Architecture Graph) to code understanding (RAG Chat) and automatic execution (Direct-to-Disk Editing & PR Creation).
+2. Deep AST Code Parsing: Does not just guess text; uses Abstract Syntax Trees to map exact caller/callee dependencies.
+3. Enterprise Security & Risk Control: Built-in Security Auditor (A+ to F) and Blast Radius Impact Analysis prevent broken deployments.
+4. Zero-Cost, Sub-Second AI Engine: Uses Groq Cloud AI to achieve real-time response speeds with 0 MB local disk overhead.
+===============================================================================
