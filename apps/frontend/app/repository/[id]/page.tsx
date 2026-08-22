@@ -607,13 +607,12 @@ export default function WorkspacePage() {
                   </div>
 
                   <span
-                    className={`px-3.5 py-1 rounded-full text-xs font-bold uppercase border shadow-md ${
-                      impactResult.riskLevel === 'HIGH' || impactResult.riskLevel === 'CRITICAL'
+                    className={`px-3.5 py-1 rounded-full text-xs font-bold uppercase border shadow-md ${impactResult.riskLevel === 'HIGH' || impactResult.riskLevel === 'CRITICAL'
                         ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                         : impactResult.riskLevel === 'MEDIUM'
-                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    }`}
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      }`}
                   >
                     Refactoring Risk: {impactResult.riskLevel}
                   </span>
@@ -851,45 +850,44 @@ export default function WorkspacePage() {
               {(healthReport.metrics && healthReport.metrics.length > 0
                 ? healthReport.metrics
                 : [
-                    {
-                      category: 'Circular Dependencies & Imports',
-                      status: (healthReport.circularDependencies?.length || 0) === 0 ? 'good' : 'warning',
-                      observation: (healthReport.circularDependencies?.length || 0) === 0
-                        ? 'Zero circular import dependencies detected. Excellent modular decoupling.'
-                        : `Found ${healthReport.circularDependencies?.length} potential circular dependency cycles.`,
-                    },
-                    {
-                      category: 'Function Complexity & Size',
-                      status: (healthReport.complexFunctions?.length || 0) === 0 ? 'good' : 'warning',
-                      observation: (healthReport.complexFunctions?.length || 0) === 0
-                        ? 'All functions are concise and under 50 lines of code.'
-                        : `Found ${healthReport.complexFunctions?.length} complex functions exceeding 50 lines.`,
-                    },
-                    {
-                      category: 'Unreferenced Exported Symbols',
-                      status: (healthReport.deadCodeCandidates?.length || 0) === 0 ? 'good' : 'warning',
-                      observation: (healthReport.deadCodeCandidates?.length || 0) === 0
-                        ? 'All exported functions and symbols are actively consumed.'
-                        : `Identified ${healthReport.deadCodeCandidates?.length} exported symbols that are unreferenced.`,
-                    },
-                    {
-                      category: 'Type Safety & Architecture Patterns',
-                      status: 'good',
-                      observation: 'TypeScript type checks and modular architectural boundaries are enforced.',
-                    },
-                  ]
+                  {
+                    category: 'Circular Dependencies & Imports',
+                    status: (healthReport.circularDependencies?.length || 0) === 0 ? 'good' : 'warning',
+                    observation: (healthReport.circularDependencies?.length || 0) === 0
+                      ? 'Zero circular import dependencies detected. Excellent modular decoupling.'
+                      : `Found ${healthReport.circularDependencies?.length} potential circular dependency cycles.`,
+                  },
+                  {
+                    category: 'Function Complexity & Size',
+                    status: (healthReport.complexFunctions?.length || 0) === 0 ? 'good' : 'warning',
+                    observation: (healthReport.complexFunctions?.length || 0) === 0
+                      ? 'All functions are concise and under 50 lines of code.'
+                      : `Found ${healthReport.complexFunctions?.length} complex functions exceeding 50 lines.`,
+                  },
+                  {
+                    category: 'Unreferenced Exported Symbols',
+                    status: (healthReport.deadCodeCandidates?.length || 0) === 0 ? 'good' : 'warning',
+                    observation: (healthReport.deadCodeCandidates?.length || 0) === 0
+                      ? 'All exported functions and symbols are actively consumed.'
+                      : `Identified ${healthReport.deadCodeCandidates?.length} exported symbols that are unreferenced.`,
+                  },
+                  {
+                    category: 'Type Safety & Architecture Patterns',
+                    status: 'good',
+                    observation: 'TypeScript type checks and modular architectural boundaries are enforced.',
+                  },
+                ]
               ).map((m: any, idx: number) => (
                 <div key={idx} className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-white">{m.category}</h3>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                        m.status === 'good'
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${m.status === 'good'
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                           : m.status === 'warning'
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                      }`}
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        }`}
                     >
                       {m.status}
                     </span>
@@ -918,86 +916,5 @@ export default function WorkspacePage() {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* TAB 9: SECURITY AUDIT */}
-        {activeTab === 'security' && securityReport && (
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-rose-400 font-semibold uppercase tracking-wider">Automated AI Vulnerability Scanner</span>
-                  <h2 className="text-xl font-bold text-white mt-1">Security & Secret Exposure Audit</h2>
-                </div>
-
-                <div className="flex items-center gap-4 bg-darkBg px-5 py-3 rounded-2xl border border-darkBorder">
-                  <div>
-                    <span className="text-[10px] text-gray-400 font-semibold block uppercase">Security Score</span>
-                    <span className="text-xl font-extrabold text-emerald-400">{securityReport.score || 95}/100</span>
-                  </div>
-                  <div className="h-8 w-[1px] bg-darkBorder" />
-                  <div>
-                    <span className="text-[10px] text-gray-400 font-semibold block uppercase">Audit Grade</span>
-                    <span className="text-xl font-extrabold text-cyan-400">{securityReport.grade}</span>
-                  </div>
-                </div>
-              </div>
-
-              {securityReport.summary && (
-                <div className="p-4 rounded-xl bg-darkBg border border-darkBorder text-xs text-gray-300 leading-relaxed font-mono">
-                  🔒 {securityReport.summary}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                Audited Vulnerabilities & Security Rule Checks ({(securityReport.findings || securityReport.vulnerabilities || []).length})
-              </h3>
-
-              {(securityReport.findings || securityReport.vulnerabilities || []).map((f: any) => (
-                <div
-                  key={f.id}
-                  className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <ShieldAlert className="w-5 h-5 text-rose-400" />
-                      <div>
-                        <h4 className="text-sm font-bold text-white">{f.title}</h4>
-                        {f.filePath && (
-                          <span className="text-[11px] text-gray-400 font-mono">File: {f.filePath} {f.line ? `(Line ${f.line})` : ''}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                        f.severity === 'CRITICAL' || f.severity === 'HIGH'
-                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          : f.severity === 'MEDIUM'
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      }`}
-                    >
-                      {f.severity}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-gray-300 leading-relaxed">{f.description}</p>
-                  <div className="p-3 rounded-xl bg-darkBg border border-darkBorder text-xs text-indigo-300 font-mono">
-                    💡 Recommended Remediation: {f.recommendation || f.remediation}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  );
 }

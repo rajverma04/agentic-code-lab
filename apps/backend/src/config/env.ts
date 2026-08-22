@@ -8,6 +8,8 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 export const env = {
   PORT: process.env.PORT || '4000',
   DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
+  DIRECT_URL: process.env.DIRECT_URL || '',
+  RENDER_EXTERNAL_URL: process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL || 'https://agentic-code-lab.onrender.com',
   QDRANT_URL: process.env.QDRANT_URL || 'http://localhost:6333',
   OLLAMA_URL: process.env.OLLAMA_URL || 'http://localhost:11434',
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
