@@ -1,31 +1,82 @@
 ===============================================================================
-                       VOCALLAB - PROJECT PRESENTATION GUIDE
+               AGENTIC CODELAB - PROJECT PRESENTATION & DATA WORKFLOW GUIDE
 ===============================================================================
 
-1. PROJECT OVERVIEW (WHAT IS VOCALLAB?)
+1. PROJECT OVERVIEW (WHAT IS AGENTIC CODELAB?)
 -------------------------------------------------------------------------------
-vocallab is an AI-powered Intelligent Codebase Analyzer and Developer Assistant. 
+Agentic CodeLab is an AI-powered Intelligent Codebase Analyzer and Developer Assistant. 
 It acts like a senior software architect that instantly understands any GitHub 
-repository, visualizes its architecture in interactive 2D/3D graphs, answers 
+repository, visualizes its architecture in interactive 2D graphs, answers 
 technical questions, scans for security bugs, and even automatically edits code 
 and creates GitHub Pull Requests.
 
 The Core Problem It Solves:
 Developers and team leaders waste hours reading unfamiliar codebases, finding 
 where APIs are defined, checking for security flaws, and worrying about breaking 
-other files when refactoring code. vocallab solves this by automating codebase 
+other files when refactoring code. Agentic CodeLab solves this by automating codebase 
 understanding, risk assessment, and code refactoring in seconds.
 
+
+===============================================================================
+2. COMPLETE DATA WORK FLOW (STEP-BY-STEP EXPLANATION FOR PRESENTATION)
+===============================================================================
+
+[WORKFLOW 1: CODEBASE INGESTION & PROCESSING PIPELINE]
 -------------------------------------------------------------------------------
-2. TECH STACK USED & WHY CHOSEN
+Step 1: User submits a public or private GitHub repository URL (e.g., https://github.com/user/repo).
+Step 2: Backend Express server clones the repository to local disk storage (`./temp_repos/:id`).
+Step 3: AST Symbol Extraction Engine (`ts-morph` + Regex) scans all `.ts`, `.js`, `.py`, `.java` files:
+        - Extracts function names, class definitions, exported methods, imports (`require` / `import`), and API routes.
+Step 4: Dependency Graph Construction:
+        - Maps caller-callee links between files to build an interactive React Flow node-and-edge dependency graph.
+Step 5: Vector Chunking & Embedding:
+        - Splits code files into function-level semantic chunks.
+        - Generates 768-dimensional vector embeddings and indexes them in Qdrant Vector Store.
+Step 6: Database Storage:
+        - Saves structured metadata, file inventories, AST symbols, and dependency edges to Supabase PostgreSQL DB via Prisma ORM.
+Step 7: Ingestion Progress Auto-Updates:
+        - Frontend workspace automatically polls progress (`0% -> 25% -> 50% -> 75% -> 100%`) and displays an animated progress banner until status reaches READY.
+
+
+[WORKFLOW 2: RUNTIME RAG QUERY & AI CHAT PIPELINE]
 -------------------------------------------------------------------------------
+Step 1: User types a technical question in AI Code Chat (e.g., "Give me all APIs implemented and their file paths").
+Step 2: Intelligent RAG Engine detects query intent:
+        - If user asks a global question (e.g., "all APIs", "architecture", "routing"), RAG automatically queries the entire repository file tree + API routes across all files.
+        - If user targets a specific file, RAG combines that file's chunks with global vector search.
+Step 3: Qdrant Vector Database performs hybrid vector similarity + keyword search to retrieve the top 10 most relevant code snippets.
+Step 4: Groq Cloud AI Engine (`qwen/qwen3.6-27b`) processes prompt context:
+        - Sanitizes output by stripping internal `<think>` reasoning tags.
+        - Synthesizes a clean, professional Markdown response with exact file paths, line numbers, and code blocks.
+
+
+[WORKFLOW 3: AUTOMATED REFACTORING & GITHUB PULL REQUEST PIPELINE]
+-------------------------------------------------------------------------------
+Step 1: User enters a refactoring goal in Change Planner (or clicks an AI Suggested Refactoring Proposal card).
+Step 2: Change Planner Agent inspects source files and generates modified code proposals.
+Step 3: Direct-to-Disk Modification:
+        - Agent overwrites files directly on disk and returns a 2-bullet executive summary.
+Step 4: 1-Click GitHub Pull Request:
+        - Octokit REST API creates a new Git branch (`ai/change-timestamp`), commits edits, and submits a live Pull Request directly to GitHub!
+
+
+[WORKFLOW 4: REPOSITORY CLEANUP & DELETION PIPELINE]
+-------------------------------------------------------------------------------
+Step 1: User clicks the red "Delete Cloned Project 🗑️" button on the Landing Page or Workspace header.
+Step 2: Backend purges the cloned source directory from disk (`./temp_repos/:id`).
+Step 3: Prisma ORM issues a cascading DELETE in Supabase PostgreSQL, clearing all associated files, symbols, chunks, chats, and audit reports.
+
+
+===============================================================================
+3. TECH STACK USED & WHY CHOSEN
+===============================================================================
 A. FRONTEND:
    - Next.js 14 (App Router) + React 18:
-     * Why: Provides fast page loads, clean component architecture, and server-side rendering.
+     * Why: Fast page loads, clean component architecture, and serverless deployment on Vercel.
    - Tailwind CSS (Dark Glassmorphism UI):
      * Why: Gives a modern, premium, dark-themed visual experience for developer dashboards.
    - React Flow:
-     * Why: Used to render interactive, draggable 2D/3D Architecture Graphs with color-coded nodes and glowing dependency connection lines.
+     * Why: Renders interactive, draggable 2D Architecture Graphs with color-coded nodes (Controllers, Services, Routes, Models) and glowing dependency lines.
    - Monaco Code Editor (VS Code in Browser):
      * Why: Enables users to inspect and view modified source code files with full syntax highlighting right in the web browser.
 
@@ -36,25 +87,26 @@ B. BACKEND & PARSING:
      * Why: Parses TypeScript and JavaScript source code to extract exact function definitions, class structures, ES6 imports, and CommonJS require(...) calls accurately.
 
 C. DATABASE & VECTOR SEARCH:
-   - Prisma ORM + SQLite / PostgreSQL:
-     * Why: Stores structured metadata about repositories, indexed file lists, AST symbols, and analysis history cleanly.
+   - Supabase PostgreSQL + Prisma ORM:
+     * Why: Enterprise-grade cloud database with connection pooling (Port 5432/6543) that stores repository metadata, AST symbols, and analysis history cleanly.
    - Qdrant Vector Database:
      * Why: Stores high-dimensional vector embeddings of code blocks, allowing the AI to search code semantically (by meaning) rather than simple text search.
 
 D. AI REASONING ENGINE:
-   - Groq Cloud API (Qwen 3.6 27B Model) / Alibaba DashScope / OpenAI GPT-4o:
-     * Why: Groq Cloud delivers sub-second, lightning-fast AI responses with zero local disk space usage and zero cost.
+   - Groq Cloud API (Qwen 3.6 27B Model):
+     * Why: Delivers sub-second, ultra-fast AI responses with zero local disk space usage and zero cost.
 
--------------------------------------------------------------------------------
-3. AI AGENTS BUILT, THEIR ROLES & WHY THEY WERE CREATED
--------------------------------------------------------------------------------
+
+===============================================================================
+4. AI AGENTS BUILT, THEIR ROLES & WHY THEY WERE CREATED
+===============================================================================
 
 🤖 AGENT 1: RAG Code Architecture Chat Assistant
    - Role: Answers developer questions about codebase logic, routing, entry points, and data models using exact code context.
    - Why Created: Helps new team members onboard instantly into a new codebase without having to disturb senior developers.
 
 🤖 AGENT 2: Automatic Code Refactoring & Change Planner Agent
-   - Role: Takes natural language editing requests (e.g. "replace JWT with cookie authentication"), rewrites the source code, saves changes directly to disk, and gives a concise 2-bullet summary.
+   - Role: Takes natural language editing requests, rewrites source code files, saves changes directly to disk, and gives a concise 2-bullet summary.
    - Why Created: Saves developers hours of manual coding and eliminates copy-pasting code diffs back and forth.
 
 🤖 AGENT 3: Automated GitHub Pull Request Agent
@@ -70,18 +122,19 @@ D. AI REASONING ENGINE:
    - Why Created: Prevents developers from accidentally breaking downstream components or API routes when changing core code.
 
 🤖 AGENT 6: OpenAPI 3.0 & Markdown Documentation Generator Agent
-   - Role: Scans route handlers, request parameters, and database schemas to auto-generate valid OpenAPI 3.0 specs and Markdown documentation.
+   - Role: Scans route handlers, request parameters, and database schemas to auto-generate valid OpenAPI 3.0 specs (with 1-click JSON download) and Markdown documentation.
    - Why Created: Keeps API documentation 100% up-to-date automatically without manual documentation writing.
 
 🤖 AGENT 7: Branch-vs-Branch Architecture Comparison Agent
    - Role: Compares base vs feature branches (e.g., main vs feature/proposed) to highlight newly added or deleted AST symbols and architectural drift.
    - Why Created: Gives code reviewers full visibility into structural changes before merging code into production.
 
--------------------------------------------------------------------------------
-4. QUICK PRESENTATION TALKING POINTS (KEY HIGHLIGHTS FOR SLIDES)
--------------------------------------------------------------------------------
+
+===============================================================================
+5. QUICK PRESENTATION TALKING POINTS (KEY HIGHLIGHTS FOR SLIDES)
+===============================================================================
 1. Full Lifecycle Code Intelligence: From visualization (Architecture Graph) to code understanding (RAG Chat) and automatic execution (Direct-to-Disk Editing & PR Creation).
 2. Deep AST Code Parsing: Does not just guess text; uses Abstract Syntax Trees to map exact caller/callee dependencies.
 3. Enterprise Security & Risk Control: Built-in Security Auditor (A+ to F) and Blast Radius Impact Analysis prevent broken deployments.
-4. Zero-Cost, Sub-Second AI Engine: Uses Groq Cloud AI to achieve real-time response speeds with 0 MB local disk overhead.
+4. Production-Ready Managed Stack: Next.js on Vercel + Express on Render + Supabase PostgreSQL + Qdrant Vector DB + Groq Qwen AI LLM.
 ===============================================================================
