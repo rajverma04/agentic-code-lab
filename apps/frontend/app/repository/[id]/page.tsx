@@ -472,7 +472,8 @@ export default function WorkspacePage() {
                 </div>
                 <button
                   onClick={() => {
-                    const blob = new Blob([JSON.stringify(apiDocs.openApiSpec, null, 2)], { type: 'application/json' });
+                    const jsonContent = apiDocs.openApiJson || (apiDocs.openApiSpec ? JSON.stringify(apiDocs.openApiSpec, null, 2) : JSON.stringify(apiDocs, null, 2));
+                    const blob = new Blob([jsonContent], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -485,7 +486,7 @@ export default function WorkspacePage() {
                 </button>
               </div>
 
-              <p className="text-xs text-gray-300">{apiDocs.description}</p>
+              <p className="text-xs text-gray-300">{apiDocs.description || `Discovered ${apiDocs.endpoints?.length || 0} API endpoints in repository.`}</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
@@ -494,7 +495,7 @@ export default function WorkspacePage() {
                 API Route Documentation
               </h3>
               <div className="prose prose-invert max-w-none text-xs text-gray-300 space-y-3 whitespace-pre-wrap leading-relaxed">
-                {apiDocs.markdownDocs}
+                {apiDocs.markdownDoc || apiDocs.markdownDocs}
               </div>
             </div>
           </div>
