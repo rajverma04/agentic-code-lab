@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push --schema=prisma/schema.prisma"
   },
   "dependencies": {
     "@octokit/rest": "^20.1.0",
