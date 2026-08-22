@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Cpu, Github, ArrowRight, CheckCircle2, Clock, AlertCircle, Sparkles, Code2, Network, ShieldCheck } from 'lucide-react';
+import { Cpu, Github, ArrowRight, CheckCircle2, Clock, AlertCircle, Sparkles, Code2, Network, ShieldCheck, Trash2 } from 'lucide-react';
 import { RepositoryMetadata } from '@vocallab/shared';
 import { Navbar } from '../components/Navbar';
 import { API_BASE_URL } from '../lib/api';
@@ -51,13 +51,29 @@ export default function LandingPage() {
         setGithubUrl('');
         router.push(`/repository/${repo.id}`);
       } else {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to submit repository');
+        const data = await res.json();
+        setError(data.error || 'Failed to submit repository');
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Error connecting to backend');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteRepo = async (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents navigating to workspace
+    if (!confirm(`Are you sure you want to delete "${name}" and all its cloned files?`)) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/repositories/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setRepositories((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -65,45 +81,43 @@ export default function LandingPage() {
     <div className="min-h-screen bg-darkBg flex flex-col">
       <Navbar />
 
-      {/* Hero Section */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-12 flex flex-col items-center justify-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-6">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>AI-Native Codebase Analyzer & Developer Assistant</span>
+      <main className="flex-1 flex flex-col items-center justify-center p-6 max-w-6xl mx-auto w-full text-center space-y-12">
+        {/* HERO HEADER */}
+        <div className="space-y-4 max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
+            <Sparkles className="w-3.5 h-3.5" />
+            Autonomous Agentic Code Base Analysis
+          </div>
+
+          <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight">
+            Understand Any GitHub Codebase <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">In Seconds</span>
+          </h1>
+
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+            Deep AST code parsing, automatic dependency graph extraction, semantic vector chunking, and RAG reasoning for any public GitHub repository.
+          </p>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-extrabold text-center tracking-tight max-w-4xl leading-[1.15] mb-6">
-          Understand Any GitHub Codebase{' '}
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            In Seconds
-          </span>
-        </h1>
-
-        <p className="text-gray-400 text-center max-w-2xl text-base sm:text-lg mb-10 leading-relaxed">
-          Deep AST code parsing, automatic dependency graph extraction, semantic vector chunking, and RAG reasoning for any public GitHub repository.
-        </p>
-
-        {/* GitHub Ingestion Form */}
-        <form onSubmit={handleSubmit} className="w-full max-w-2xl mb-12">
-          <div className="flex flex-col sm:flex-row items-center gap-3 p-2 rounded-2xl bg-darkCard border border-darkBorder glass-panel shadow-2xl">
-            <div className="flex items-center gap-3 px-4 flex-1 w-full">
-              <Github className="w-5 h-5 text-gray-400 shrink-0" />
-              <input
-                type="url"
-                value={githubUrl}
-                onChange={(e) => setGithubUrl(e.target.value)}
-                placeholder="https://github.com/username/repository"
-                required
-                className="w-full bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none py-2"
-              />
+        {/* INPUT FORM */}
+        <div className="w-full max-w-2xl space-y-3">
+          <form onSubmit={handleSubmit} className="relative flex items-center">
+            <div className="absolute left-4 text-gray-500">
+              <Github className="w-5 h-5" />
             </div>
+            <input
+              type="text"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              placeholder="https://github.com/username/repository"
+              className="w-full bg-darkCard/90 border border-darkBorder rounded-2xl py-4 pl-12 pr-44 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-2xl transition-all"
+            />
             <button
               type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold text-sm text-white flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 transition-all"
+              disabled={loading || !githubUrl.trim()}
+              className="absolute right-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs shadow-lg shadow-indigo-500/20 disabled:opacity-50 transition-all flex items-center gap-2"
             >
               {loading ? (
-                <span>Cloning & Analyzing...</span>
+                <span>Cloning & Ingesting...</span>
               ) : (
                 <>
                   <span>Analyze Repository</span>
@@ -111,20 +125,20 @@ export default function LandingPage() {
                 </>
               )}
             </button>
-          </div>
+          </form>
 
           {error && (
-            <div className="mt-3 flex items-center gap-2 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 px-4 py-2 rounded-xl">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center justify-center gap-2">
+              <AlertCircle className="w-4 h-4" />
               <span>{error}</span>
             </div>
           )}
-        </form>
+        </div>
 
-        {/* Features Highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-16">
-          <div className="p-6 rounded-2xl bg-darkCard/60 border border-darkBorder glass-panel">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4">
+        {/* FEATURES GRID */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-4xl text-left">
+          <div className="p-6 rounded-2xl bg-darkCard/60 border border-darkBorder glass-panel hover:border-indigo-500/30 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4">
               <Code2 className="w-5 h-5" />
             </div>
             <h3 className="font-bold text-white mb-1 text-base">AST Structural Analysis</h3>
@@ -133,8 +147,8 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-darkCard/60 border border-darkBorder glass-panel">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+          <div className="p-6 rounded-2xl bg-darkCard/60 border border-darkBorder glass-panel hover:border-indigo-500/30 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
               <Network className="w-5 h-5" />
             </div>
             <h3 className="font-bold text-white mb-1 text-base">Visual Dependency Graph</h3>
@@ -143,8 +157,8 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-darkCard/60 border border-darkBorder glass-panel">
-            <div className="w-10 h-10 rounded-xl bg-pink-600/10 border border-pink-500/20 flex items-center justify-center text-pink-400 mb-4">
+          <div className="p-6 rounded-2xl bg-darkCard/60 border border-darkBorder glass-panel hover:border-indigo-500/30 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 mb-4">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <h3 className="font-bold text-white mb-1 text-base">Impact Analysis & Health Audit</h3>
@@ -154,9 +168,9 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Ingested Repositories List */}
+        {/* INGESTED REPOSITORIES LIST WITH DELETE BUTTON */}
         {repositories.length > 0 && (
-          <div className="w-full max-w-4xl">
+          <div className="w-full max-w-4xl text-left">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <Cpu className="w-5 h-5 text-indigo-400" />
               Recent Analyzed Repositories
@@ -195,7 +209,7 @@ export default function LandingPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs shrink-0">
+                  <div className="flex items-center gap-3 text-xs shrink-0">
                     {repo.status === 'READY' ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -207,6 +221,16 @@ export default function LandingPage() {
                         {repo.status}
                       </span>
                     )}
+
+                    {/* Delete Cloned Repository Button */}
+                    <button
+                      onClick={(e) => handleDeleteRepo(repo.id, repo.name, e)}
+                      title="Delete cloned project"
+                      className="p-2 rounded-xl bg-darkBg hover:bg-rose-500/20 border border-darkBorder hover:border-rose-500/40 text-gray-400 hover:text-rose-400 transition-all z-10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
                     <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>

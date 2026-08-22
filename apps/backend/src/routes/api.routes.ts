@@ -418,4 +418,31 @@ router.post('/repositories/:id/apply-changes', async (req, res) => {
   }
 });
 
+// 18. Delete a repository and cleanup disk files
+router.delete('/repositories/:id', async (req, res) => {
+  try {
+    const repositoryId = req.params.id;
+
+    const repo = await prisma.repository.findUnique({ where: { id: repositoryId } });
+    if (!repo) return res.status(404).json({ error: 'Repository not found' });
+
+    // Delete directory from disk if exists
+    const repoDir = path.join(env.REPOS_DIR, repositoryId);
+    if (fs.existsSync(repoDir)) {
+      try {
+        fs.rmSync(repoDir, { recursive: true, force: true });
+      } catch (err) {
+        console.warn(`Could not delete directory ${repoDir}:`, err);
+      }
+    }
+
+    // Delete record from Prisma (Cascades delete to files, symbols, chunks, dependencies, chats, etc.)
+    await prisma.repository.delete({ where: { id: repositoryId } });
+
+    return res.json({ success: true, message: 'Repository deleted successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

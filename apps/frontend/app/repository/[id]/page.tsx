@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '../../../components/Navbar';
 import { ChatWindow } from '../../../components/chat/ChatWindow';
 import { ArchitectureGraph } from '../../../components/graph/ArchitectureGraph';
@@ -39,11 +39,28 @@ import {
   GitCompare,
   Loader2,
   Check,
+  Trash2,
 } from 'lucide-react';
 
 export default function WorkspacePage() {
+  const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
+
+  const handleDeleteRepo = async () => {
+    if (!confirm(`Are you sure you want to delete "${repo?.name || 'this repository'}" and all its cloned files?`)) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/repositories/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        router.push('/');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [repo, setRepo] = useState<RepositoryMetadata | null>(null);
@@ -296,6 +313,25 @@ export default function WorkspacePage() {
                 </div>
               </div>
             )}
+
+            {/* Header with Delete Repository Action */}
+            <div className="flex items-center justify-between p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <GitBranch className="w-5 h-5 text-indigo-400" />
+                  {repo?.name || 'Codebase Overview'}
+                </h2>
+                <p className="text-xs text-gray-400 font-mono mt-0.5">{repo?.githubUrl}</p>
+              </div>
+
+              <button
+                onClick={handleDeleteRepo}
+                className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold text-xs transition-all flex items-center gap-2 shadow-md shadow-rose-500/10"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Cloned Project
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel">
