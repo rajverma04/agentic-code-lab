@@ -226,9 +226,10 @@ export default function LandingPage() {
                     <button
                       onClick={(e) => handleDeleteRepo(repo.id, repo.name, e)}
                       title="Delete cloned project"
-                      className="p-2 rounded-xl bg-darkBg hover:bg-rose-500/20 border border-darkBorder hover:border-rose-500/40 text-gray-400 hover:text-rose-400 transition-all z-10"
+                      className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-semibold text-xs transition-all z-10 flex items-center gap-1.5 shadow-sm"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Delete</span>
                     </button>
 
                     <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
