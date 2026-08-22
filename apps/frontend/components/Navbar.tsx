@@ -33,7 +33,7 @@ export function Navbar({ activeRepoId, activeTab = 'overview', setActiveTab, rep
           </div>
           <div>
             <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
-              vocallab
+              Agentic CodeLab
             </span>
             <span className="text-[10px] uppercase tracking-widest font-semibold text-indigo-400 block -mt-1">
               AI Code Intelligence

@@ -234,7 +234,7 @@ export default function WorkspacePage() {
         body: JSON.stringify({
           branchName: `ai/change-${Date.now()}`,
           title: changePlan ? `AI Refactor: ${changePlan.goal}` : 'AI Code Refactoring',
-          body: changePlan ? changePlan.summary : 'Automated code changes proposed by vocallab AI Code Intelligence.',
+          body: changePlan ? changePlan.summary : 'Automated code changes proposed by Agentic CodeLab AI Code Intelligence.',
           changes,
         }),
       });

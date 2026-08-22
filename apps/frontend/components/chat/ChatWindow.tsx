@@ -120,7 +120,7 @@ export function ChatWindow({ repositoryId, files, selectedFile: initialSelectedF
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Ask Anything About This Codebase</h2>
               <p className="text-xs text-gray-400 leading-relaxed">
-                vocallab combines AST parsing, semantic vector search, and graph expansion to give pinpoint precise code explanations with line-by-line source citations.
+                Agentic CodeLab combines AST parsing, semantic vector search, and graph expansion to give pinpoint precise code explanations with line-by-line source citations.
               </p>
             </div>
 

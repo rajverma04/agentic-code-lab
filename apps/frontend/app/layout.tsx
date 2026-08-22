@@ -2,7 +2,7 @@ import './globals.css';
 import React from 'react';
 
 export const metadata = {
-  title: 'vocallab — AI-Powered Intelligent Codebase Analyzer',
+  title: 'Agentic CodeLab — AI-Powered Intelligent Codebase Analyzer',
   description: 'AI-native codebase architecture analyzer, RAG assistant, dependency graph explorer, and change planner.',
 };
 
