@@ -31,6 +31,7 @@ uploads/
 Thumbs.db
 .vscode/
 .idea/
+desc.txt
 
 # Logs
 *.log
