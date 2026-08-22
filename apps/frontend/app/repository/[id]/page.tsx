@@ -19,6 +19,7 @@ import {
   RepositoryApiDocumentation,
   PullRequestResult,
   BranchComparisonResult,
+  SymbolInfo,
 } from '@vocallab/shared';
 import {
   Cpu,
@@ -40,6 +41,8 @@ import {
   Loader2,
   Check,
   Trash2,
+  Sparkles,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function WorkspacePage() {
@@ -65,6 +68,7 @@ export default function WorkspacePage() {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [repo, setRepo] = useState<RepositoryMetadata | null>(null);
   const [files, setFiles] = useState<FileMetadata[]>([]);
+  const [symbols, setSymbols] = useState<SymbolInfo[]>([]);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [selectedFileCode, setSelectedFileCode] = useState<string>('// Select a file to view code');
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], edges: [] });
@@ -106,7 +110,7 @@ export default function WorkspacePage() {
 
           // If repo is ready or has files, fetch workspace data
           if (repoData.status === 'READY' || repoData.fileCount > 0) {
-            // 2. Files
+            // Files
             fetch(`${API_BASE_URL}/api/repositories/${id}/files`)
               .then((res) => res.json())
               .then((data) => {
@@ -117,31 +121,37 @@ export default function WorkspacePage() {
               })
               .catch(console.error);
 
-            // 3. Architecture Graph
+            // Symbols
+            fetch(`${API_BASE_URL}/api/repositories/${id}/symbols`)
+              .then((res) => res.json())
+              .then((data) => { if (isSubscribed && Array.isArray(data)) setSymbols(data); })
+              .catch(console.error);
+
+            // Architecture Graph
             fetch(`${API_BASE_URL}/api/repositories/${id}/graph`)
               .then((res) => res.json())
               .then((data) => { if (isSubscribed) setGraphData(data); })
               .catch(console.error);
 
-            // 4. Architecture Summary
+            // Architecture Summary
             fetch(`${API_BASE_URL}/api/repositories/${id}/architecture`)
               .then((res) => res.json())
               .then((data) => { if (isSubscribed) setArchitecture(data); })
               .catch(console.error);
 
-            // 5. Health Report
+            // Health Report
             fetch(`${API_BASE_URL}/api/repositories/${id}/health`)
               .then((res) => res.json())
               .then((data) => { if (isSubscribed) setHealthReport(data); })
               .catch(console.error);
 
-            // 6. API Docs
+            // API Docs
             fetch(`${API_BASE_URL}/api/repositories/${id}/docs`)
               .then((res) => res.json())
               .then((data) => { if (isSubscribed) setApiDocs(data); })
               .catch(console.error);
 
-            // 7. Security Audit Report
+            // Security Audit Report
             fetch(`${API_BASE_URL}/api/repositories/${id}/security`)
               .then((res) => res.json())
               .then((data) => { if (isSubscribed) setSecurityReport(data); })
@@ -176,15 +186,17 @@ export default function WorkspacePage() {
       .catch(console.error);
   }, [id, selectedFilePath]);
 
-  const handleRunImpact = async () => {
-    if (!targetSymbolInput.trim() || impactLoading) return;
+  const handleRunImpact = async (customSymbolName?: string) => {
+    const symbolToAnalyze = customSymbolName || targetSymbolInput;
+    if (!symbolToAnalyze.trim() || impactLoading) return;
+    setTargetSymbolInput(symbolToAnalyze);
     setImpactLoading(true);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/repositories/${id}/impact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbolName: targetSymbolInput }),
+        body: JSON.stringify({ symbolName: symbolToAnalyze }),
       });
       if (res.ok) setImpactResult(await res.json());
     } catch (err) {
@@ -194,8 +206,10 @@ export default function WorkspacePage() {
     }
   };
 
-  const handleRunPlanner = async () => {
-    if (!planGoalInput.trim() || plannerLoading) return;
+  const handleRunPlanner = async (customGoal?: string) => {
+    const goalToExecute = customGoal || planGoalInput;
+    if (!goalToExecute.trim() || plannerLoading) return;
+    setPlanGoalInput(goalToExecute);
     setPlannerLoading(true);
     setApplyMessage(null);
     setPrResult(null);
@@ -204,7 +218,7 @@ export default function WorkspacePage() {
       const res = await fetch(`${API_BASE_URL}/api/repositories/${id}/plan-change`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal: planGoalInput }),
+        body: JSON.stringify({ goal: goalToExecute }),
       });
       if (res.ok) {
         const planData = await res.json();
@@ -264,6 +278,14 @@ export default function WorkspacePage() {
       setBranchLoading(false);
     }
   };
+
+  // AI Refactoring Proposal Presets
+  const suggestedRefactoringGoals = [
+    `Add input validation and error logging across controllers in ${repo?.name || 'this repository'}`,
+    `Refactor core authentication and authorization handlers into a dedicated service layer`,
+    `Wrap database queries in error-handled transaction context to prevent leaks`,
+    `Add rate-limiting middleware to prevent API route abuse and denial of service`,
+  ];
 
   return (
     <div className="min-h-screen bg-darkBg flex flex-col">
@@ -340,7 +362,7 @@ export default function WorkspacePage() {
               </div>
               <div className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel">
                 <span className="text-xs text-gray-400 font-semibold block mb-1">Extracted AST Symbols</span>
-                <span className="text-2xl font-bold text-indigo-400">{repo?.symbolCount || 0}</span>
+                <span className="text-2xl font-bold text-indigo-400">{repo?.symbolCount || symbols.length || 0}</span>
               </div>
               <div className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel">
                 <span className="text-xs text-gray-400 font-semibold block mb-1">Security Rating</span>
@@ -504,14 +526,18 @@ export default function WorkspacePage() {
         {/* TAB 6: IMPACT ANALYSIS */}
         {activeTab === 'impact' && (
           <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Zap className="w-5 h-5 text-amber-400" />
-                AI-Powered Code Impact Analysis
-              </h2>
-              <p className="text-xs text-gray-400">
-                Simulate modifying a function or class to reveal all direct callers, downstream API routes, affected components, and potential breaking risks.
-              </p>
+            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-amber-400" />
+                    AI-Powered Code Impact Analysis
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Simulate modifying a function or class to reveal all direct callers, downstream API routes, affected components, and potential breaking risks.
+                  </p>
+                </div>
+              </div>
 
               <div className="flex gap-3">
                 <input
@@ -522,12 +548,50 @@ export default function WorkspacePage() {
                   className="flex-1 bg-darkBg border border-darkBorder rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 />
                 <button
-                  onClick={handleRunImpact}
-                  disabled={impactLoading}
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow-lg shadow-amber-600/20 transition-all"
+                  onClick={() => handleRunImpact()}
+                  disabled={impactLoading || !targetSymbolInput.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow-lg shadow-amber-600/20 disabled:opacity-50 transition-all"
                 >
                   {impactLoading ? 'Analyzing Impact...' : 'Analyze Impact'}
                 </button>
+              </div>
+
+              {/* AI SUGGESTED SYMBOL TARGETS FROM CLONED PROJECT */}
+              <div className="pt-3 border-t border-darkBorder space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                    AI Suggested Symbols Discovered in "{repo?.name || 'this codebase'}"
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">Click any extracted symbol below to analyze its impact instantly:</p>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {symbols.length > 0 ? (
+                    symbols.slice(0, 12).map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleRunImpact(s.name)}
+                        className="px-3 py-1.5 rounded-xl bg-darkBg hover:bg-amber-500/10 border border-darkBorder hover:border-amber-500/40 text-xs font-mono text-amber-300 transition-all flex items-center gap-1.5 shadow-sm group"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                        <span className="font-bold">{s.name}</span>
+                        <span className="text-[10px] text-gray-500 font-sans">({s.type})</span>
+                      </button>
+                    ))
+                  ) : (
+                    ['createProblem', 'authService', 'getUserById', 'handleUpload', 'logger'].map((defSym, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleRunImpact(defSym)}
+                        className="px-3 py-1.5 rounded-xl bg-darkBg hover:bg-amber-500/10 border border-darkBorder hover:border-amber-500/40 text-xs font-mono text-amber-300 transition-all flex items-center gap-1.5"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-400" />
+                        <span>{defSym}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
@@ -616,7 +680,7 @@ export default function WorkspacePage() {
         {/* TAB 7: AUTOMATIC CODE EDITOR & CHANGE PLANNER */}
         {activeTab === 'planner' && (
           <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
+            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Code className="w-5 h-5 text-indigo-400" />
@@ -627,7 +691,7 @@ export default function WorkspacePage() {
                 Describe any architectural change or refactoring goal in natural language. The AI will automatically rewrite source code files and save them directly to disk.
               </p>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <textarea
                   value={planGoalInput}
                   onChange={(e) => setPlanGoalInput(e.target.value)}
@@ -638,12 +702,36 @@ export default function WorkspacePage() {
 
                 <div className="flex items-center justify-between">
                   <button
-                    onClick={handleRunPlanner}
-                    disabled={plannerLoading}
-                    className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2"
+                    onClick={() => handleRunPlanner()}
+                    disabled={plannerLoading || !planGoalInput.trim()}
+                    className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all flex items-center gap-2"
                   >
                     {plannerLoading ? 'Applying Code Changes Directly to Disk...' : 'Execute & Apply Code Edits Directly to Disk ⚡'}
                   </button>
+                </div>
+
+                {/* AI SUGGESTED REFACTORING GOALS FOR THIS PROJECT */}
+                <div className="pt-3 border-t border-darkBorder space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                      AI Recommended Refactoring Proposals for "{repo?.name || 'this project'}"
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400">Click any AI proposal below to populate the prompt and execute automated code edits:</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {suggestedRefactoringGoals.map((goal, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleRunPlanner(goal)}
+                        className="p-3 rounded-xl bg-darkBg hover:bg-indigo-600/10 border border-darkBorder hover:border-indigo-500/40 text-xs text-gray-300 text-left transition-all flex items-start justify-between gap-2 group"
+                      >
+                        <span className="font-medium group-hover:text-white leading-relaxed">{goal}</span>
+                        <ArrowRight className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5 group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -820,7 +908,7 @@ export default function WorkspacePage() {
 
                   <p className="text-xs text-gray-300">{f.description}</p>
                   <div className="p-3 rounded-xl bg-darkBg border border-darkBorder text-xs text-indigo-300 font-mono">
-                    💡 Recommended Fix: {f.remediation}
+                    💡 Recommended Fix: {f.recommendation || f.remediation}
                   </div>
                 </div>
               ))}

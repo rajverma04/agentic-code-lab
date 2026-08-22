@@ -97,6 +97,28 @@ router.get('/repositories/:id/files', async (req, res) => {
   }
 });
 
+// 4c. Get key extracted AST symbols for repository
+router.get('/repositories/:id/symbols', async (req, res) => {
+  try {
+    const symbols = await prisma.symbol.findMany({
+      where: { repositoryId: req.params.id },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        filePath: true,
+        signature: true,
+        docstring: true,
+      },
+      take: 30,
+      orderBy: { exported: 'desc' },
+    });
+    return res.json(symbols);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // 4b. Get raw file content
 router.get('/repositories/:id/file-content', async (req, res) => {
   try {
