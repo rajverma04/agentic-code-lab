@@ -15,13 +15,16 @@ export class RagService {
   public async answerQuestion(input: RAGQueryInput): Promise<ChatMessage> {
     const { repositoryId, chatId, question, selectedFilePath } = input;
 
+    // Detect if user is asking a broad/global repository question
+    const isGlobalQuestion = /all api|all route|list api|all endpoint|file path|structure|architecture|how to|overall/i.test(question);
+
     // 1. Generate query vector embedding
     const queryEmbedding = await embeddingService.generateEmbedding(question);
 
     let searchResults: { score: number; payload: any }[] = [];
 
-    // 1. If Selected File Mode is active, retrieve chunks for selectedFilePath directly from DB
-    if (selectedFilePath) {
+    // 2. Selected File Mode (only restrict strictly if NOT asking a global question)
+    if (selectedFilePath && !isGlobalQuestion) {
       const fileChunks = await prisma.codeChunk.findMany({
         where: { repositoryId, filePath: selectedFilePath },
         orderBy: { startLine: 'asc' },
@@ -45,24 +48,26 @@ export class RagService {
       }
     }
 
-    // 2. If no selected file mode or no file chunks found, run vector + DB keyword search
-    if (searchResults.length === 0) {
-      searchResults = await qdrantService.search(repositoryId, queryEmbedding, 6);
+    // 3. Global Vector Search + Broad Repository Context Retrieval
+    if (searchResults.length === 0 || isGlobalQuestion) {
+      const vectorMatches = await qdrantService.search(repositoryId, queryEmbedding, 10);
+      searchResults = [...searchResults, ...vectorMatches];
 
-      // Routing / Entry Point Query Prioritization
-      if (/route|routing|entry|flow|http/i.test(question)) {
+      // Route / API / Controller Prioritization
+      if (/api|route|endpoint|controller|server|backend|app/i.test(question)) {
         const routeChunks = await prisma.codeChunk.findMany({
           where: {
             repositoryId,
             OR: [
               { filePath: { contains: 'route' } },
-              { filePath: { contains: 'index' } },
+              { filePath: { contains: 'api' } },
+              { filePath: { contains: 'controller' } },
               { filePath: { contains: 'server' } },
               { filePath: { contains: 'app' } },
-              { filePath: { contains: 'controller' } },
+              { filePath: { contains: 'index' } },
             ],
           },
-          take: 4,
+          take: 8,
         });
 
         routeChunks.forEach((rc) => {
@@ -85,12 +90,12 @@ export class RagService {
         });
       }
 
-      // Extract search keywords from user question
+      // Keyword Search Fallback
       const keywords = question
         .toLowerCase()
         .replace(/[^a-z0-9_.]/g, ' ')
         .split(/\s+/)
-        .filter((w) => w.length >= 3 && !['how', 'this', 'working', 'what', 'where', 'does', 'that', 'with', 'from', 'explain', 'show'].includes(w));
+        .filter((w) => w.length >= 3 && !['how', 'this', 'working', 'what', 'where', 'does', 'that', 'with', 'from', 'explain', 'show', 'give', 'list'].includes(w));
 
       if (keywords.length > 0) {
         const keywordChunks = await prisma.codeChunk.findMany({
@@ -127,8 +132,17 @@ export class RagService {
       }
     }
 
-    // 3. Build Source Context
-    const sources = searchResults.map((r) => ({
+    // 4. Also fetch Repository File Tree & API Symbols for complete overview
+    const repoFiles = await prisma.file.findMany({
+      where: { repositoryId },
+      select: { filePath: true, language: true },
+      take: 50,
+    });
+
+    const fileListText = repoFiles.map((f) => `- ${f.filePath} (${f.language})`).join('\n');
+
+    // 5. Build Source Context
+    const sources = searchResults.slice(0, 10).map((r) => ({
       filePath: r.payload.filePath,
       startLine: r.payload.startLine,
       endLine: r.payload.endLine,
@@ -137,31 +151,39 @@ export class RagService {
     }));
 
     const contextText = searchResults
+      .slice(0, 10)
       .map(
         (r, idx) =>
           `[Source ${idx + 1}]: File: ${r.payload.filePath} (Lines ${r.payload.startLine}-${r.payload.endLine})\n\`\`\`\n${r.payload.code}\n\`\`\``
       )
       .join('\n\n');
 
-    // 4. Construct Prompt
-    const systemPrompt = `You are an expert AI Codebase Assistant analyzing a GitHub repository. Answer the user's question accurately using only the provided codebase context and source snippets. Always explain code logic clearly and cite specific files and lines.`;
+    // 6. Construct System & User Prompts
+    const systemPrompt = `You are an expert AI Codebase Assistant. Answer the user's inquiry with extreme precision and detail based on the provided codebase context and file structure.
+Do NOT output internal <think> reasoning blocks. Directly provide a clean, professional, well-formatted Markdown response with headings, tables, bullet points, and exact file paths.`;
 
     const userPrompt = `
 User Question: "${question}"
 
+Repository File Structure Overview:
+${fileListText}
+
 Relevant Codebase Snippets:
-${contextText || 'No direct snippet match. Use general repository architecture knowledge.'}
+${contextText || 'No direct snippet match. Use repository file tree structure to answer.'}
 
 Instructions:
-1. Explain how the code handles the user's inquiry step by step.
-2. Refer to specific files and symbols mentioned in the context.
-3. Keep the response well-structured with markdown headings, bullet points, and code blocks.
+1. Provide a comprehensive, structured response answering the question in full.
+2. If asking for APIs/routes/endpoints, list all discovered endpoints, their purpose/function, HTTP methods, and exact file paths.
+3. Use clear GitHub-style Markdown formatting with code blocks, tables, and bullet points.
 `;
 
-    // 5. Generate Response via LLM
-    const responseText = await llmService.generateCompletion(userPrompt, systemPrompt);
+    // 7. Generate Response via LLM
+    let responseText = await llmService.generateCompletion(userPrompt, systemPrompt);
 
-    // 6. Generate Code Flow Steps if asking about an operation/flow
+    // Strip any remaining <think> tags
+    responseText = responseText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+    // 8. Generate Code Flow Steps if applicable
     const codeFlow: CodeFlowStep[] = searchResults.slice(0, 4).map((r, idx) => ({
       stepIndex: idx + 1,
       title: r.payload.symbolName ? `Execute ${r.payload.symbolName}()` : `Read ${r.payload.filePath}`,
@@ -172,7 +194,7 @@ Instructions:
       snippet: r.payload.code.slice(0, 150),
     }));
 
-    // 7. Save Assistant Message to DB
+    // 9. Save Assistant Message to DB
     const assistantMessage = await prisma.chatMessage.create({
       data: {
         chatId,

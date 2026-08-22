@@ -23,7 +23,9 @@ export class LlmService {
         if (res.ok) {
           const data: any = await res.json();
           if (data.choices && data.choices[0]?.message?.content) {
-            return data.choices[0].message.content;
+            const rawContent = data.choices[0].message.content;
+            const cleanedContent = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+            return cleanedContent || rawContent;
           }
         }
       } catch (err) {

@@ -153,7 +153,7 @@ export function ChatWindow({ repositoryId, files, selectedFile: initialSelectedF
                     : 'bg-darkCard text-gray-200 border-darkBorder glass-panel'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{m.content}</div>
+                <div className="whitespace-pre-wrap">{m.content ? m.content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim() : ''}</div>
 
                 {/* Sources Section */}
                 {m.sources && m.sources.length > 0 && (
