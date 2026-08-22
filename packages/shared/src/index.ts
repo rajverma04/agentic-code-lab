@@ -177,31 +177,34 @@ export interface CodeDiffProposal {
   diffSummary: string;
 }
 
+export interface HealthMetric {
+  category: string;
+  status: 'good' | 'warning' | 'critical';
+  observation: string;
+}
+
 export interface RepositoryHealthReport {
   score: number; // 0 to 100
   summary: string;
-  circularDependencies: {
+  metrics?: HealthMetric[];
+  circularDependencies?: {
     cycle: string[];
   }[];
-  complexFunctions: {
+  complexFunctions?: {
     symbolName: string;
     filePath: string;
     lines: number;
   }[];
-  deadCodeCandidates: {
+  deadCodeCandidates?: {
     symbolName: string;
     filePath: string;
     reason: string;
   }[];
-  missingErrorHandling: {
+  missingErrorHandling?: {
     filePath: string;
     line: number;
   }[];
 }
-
-// -------------------------------------------------------------
-// NEW ADVANCED FEATURES INTERFACES
-// -------------------------------------------------------------
 
 export interface SecurityVulnerability {
   id: string;
@@ -211,6 +214,7 @@ export interface SecurityVulnerability {
   line?: number;
   description: string;
   recommendation: string;
+  remediation?: string;
 }
 
 export interface SecurityAuditReport {
@@ -218,6 +222,7 @@ export interface SecurityAuditReport {
   score: number;
   summary: string;
   vulnerabilities: SecurityVulnerability[];
+  findings?: SecurityVulnerability[];
 }
 
 export interface ApiEndpointDoc {
@@ -233,9 +238,12 @@ export interface RepositoryApiDocumentation {
   title: string;
   version: string;
   baseUrl: string;
+  description?: string;
   endpoints: ApiEndpointDoc[];
-  markdownDoc: string;
+  markdownDoc?: string;
+  markdownDocs?: string;
   openApiJson: string;
+  openApiSpec?: any;
 }
 
 export interface PullRequestResult {

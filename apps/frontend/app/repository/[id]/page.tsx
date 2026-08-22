@@ -29,102 +29,124 @@ import {
   Layers,
   AlertTriangle,
   FileText,
-  Lock,
-  GitPullRequest,
   CheckCircle2,
-  ChevronRight,
+  GitBranch,
+  GitPullRequest,
+  ExternalLink,
+  ShieldAlert,
+  Activity,
+  Search,
   GitCompare,
-  Save,
+  Loader2,
   Check,
-  CheckCircle,
 } from 'lucide-react';
 
-export default function RepositoryWorkspacePage() {
-  const { id } = useParams() as { id: string };
+export default function WorkspacePage() {
+  const params = useParams();
+  const id = params?.id as string;
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const [repo, setRepo] = useState<RepositoryMetadata | null>(null);
   const [files, setFiles] = useState<FileMetadata[]>([]);
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [selectedFileCode, setSelectedFileCode] = useState<string>('// Select a file to view code');
+  const [graphData, setGraphData] = useState<GraphData>({ nodes: [], edges: [] });
   const [architecture, setArchitecture] = useState<ArchitectureSummary | null>(null);
-  const [healthReport, setHealthReport] = useState<RepositoryHealthReport | null>(null);
 
-  // New Features State
-  const [apiDocs, setApiDocs] = useState<RepositoryApiDocumentation | null>(null);
-  const [securityReport, setSecurityReport] = useState<SecurityAuditReport | null>(null);
-  const [prResult, setPrResult] = useState<PullRequestResult | null>(null);
-  const [prLoading, setPrLoading] = useState(false);
+  const [targetSymbolInput, setTargetSymbolInput] = useState('');
+  const [impactResult, setImpactResult] = useState<ImpactAnalysisResult | null>(null);
+  const [impactLoading, setImpactLoading] = useState(false);
 
-  // Apply to disk status
+  const [planGoalInput, setPlanGoalInput] = useState('');
+  const [changePlan, setChangePlan] = useState<CodeChangePlan | null>(null);
+  const [plannerLoading, setPlannerLoading] = useState(false);
   const [applyMessage, setApplyMessage] = useState<string | null>(null);
 
-  // Branch Comparison State
+  const [healthReport, setHealthReport] = useState<RepositoryHealthReport | null>(null);
+  const [securityReport, setSecurityReport] = useState<SecurityAuditReport | null>(null);
+  const [apiDocs, setApiDocs] = useState<RepositoryApiDocumentation | null>(null);
+
+  const [prLoading, setPrLoading] = useState(false);
+  const [prResult, setPrResult] = useState<PullRequestResult | null>(null);
+
   const [baseBranch, setBaseBranch] = useState('main');
   const [compareBranch, setCompareBranch] = useState('feature/proposed');
   const [branchDiff, setBranchDiff] = useState<BranchComparisonResult | null>(null);
   const [branchLoading, setBranchLoading] = useState(false);
 
-  // Selected file for Monaco Editor
-  const [selectedFilePath, setSelectedFilePath] = useState<string>('');
-  const [selectedFileCode, setSelectedFileCode] = useState<string>('// Select a file from the explorer to view source code.');
-
-  // Impact Analysis State
-  const [targetSymbolInput, setTargetSymbolInput] = useState('');
-  const [impactResult, setImpactResult] = useState<ImpactAnalysisResult | null>(null);
-  const [impactLoading, setImpactLoading] = useState(false);
-
-  // Change Planner State
-  const [planGoalInput, setPlanGoalInput] = useState('');
-  const [changePlan, setChangePlan] = useState<CodeChangePlan | null>(null);
-  const [plannerLoading, setPlannerLoading] = useState(false);
-
+  // Auto-Polling Effect: Refetches status & progress every 1.5s until READY
   useEffect(() => {
     if (!id) return;
 
-    // 1. Repository metadata
-    fetch(`${API_BASE_URL}/api/repositories/${id}`)
-      .then((res) => res.json())
-      .then((data) => setRepo(data))
-      .catch(console.error);
+    let isSubscribed = true;
 
-    // 2. Files
-    fetch(`${API_BASE_URL}/api/repositories/${id}/files`)
-      .then((res) => res.json())
-      .then((data) => {
-        setFiles(data);
-        if (data.length > 0) setSelectedFilePath(data[0].filePath);
-      })
-      .catch(console.error);
+    const fetchRepoData = async () => {
+      try {
+        const repoRes = await fetch(`${API_BASE_URL}/api/repositories/${id}`);
+        if (repoRes.ok) {
+          const repoData: RepositoryMetadata = await repoRes.json();
+          if (isSubscribed) setRepo(repoData);
 
-    // 3. Architecture Graph
-    fetch(`${API_BASE_URL}/api/repositories/${id}/graph`)
-      .then((res) => res.json())
-      .then((data) => setGraphData(data))
-      .catch(console.error);
+          // If repo is ready or has files, fetch workspace data
+          if (repoData.status === 'READY' || repoData.fileCount > 0) {
+            // 2. Files
+            fetch(`${API_BASE_URL}/api/repositories/${id}/files`)
+              .then((res) => res.json())
+              .then((data) => {
+                if (isSubscribed) {
+                  setFiles(data);
+                  if (data.length > 0 && !selectedFilePath) setSelectedFilePath(data[0].filePath);
+                }
+              })
+              .catch(console.error);
 
-    // 4. Architecture Summary
-    fetch(`${API_BASE_URL}/api/repositories/${id}/architecture`)
-      .then((res) => res.json())
-      .then((data) => setArchitecture(data))
-      .catch(console.error);
+            // 3. Architecture Graph
+            fetch(`${API_BASE_URL}/api/repositories/${id}/graph`)
+              .then((res) => res.json())
+              .then((data) => { if (isSubscribed) setGraphData(data); })
+              .catch(console.error);
 
-    // 5. Health Report
-    fetch(`${API_BASE_URL}/api/repositories/${id}/health`)
-      .then((res) => res.json())
-      .then((data) => setHealthReport(data))
-      .catch(console.error);
+            // 4. Architecture Summary
+            fetch(`${API_BASE_URL}/api/repositories/${id}/architecture`)
+              .then((res) => res.json())
+              .then((data) => { if (isSubscribed) setArchitecture(data); })
+              .catch(console.error);
 
-    // 6. API Docs
-    fetch(`${API_BASE_URL}/api/repositories/${id}/docs`)
-      .then((res) => res.json())
-      .then((data) => setApiDocs(data))
-      .catch(console.error);
+            // 5. Health Report
+            fetch(`${API_BASE_URL}/api/repositories/${id}/health`)
+              .then((res) => res.json())
+              .then((data) => { if (isSubscribed) setHealthReport(data); })
+              .catch(console.error);
 
-    // 7. Security Audit Report
-    fetch(`${API_BASE_URL}/api/repositories/${id}/security`)
-      .then((res) => res.json())
-      .then((data) => setSecurityReport(data))
-      .catch(console.error);
+            // 6. API Docs
+            fetch(`${API_BASE_URL}/api/repositories/${id}/docs`)
+              .then((res) => res.json())
+              .then((data) => { if (isSubscribed) setApiDocs(data); })
+              .catch(console.error);
+
+            // 7. Security Audit Report
+            fetch(`${API_BASE_URL}/api/repositories/${id}/security`)
+              .then((res) => res.json())
+              .then((data) => { if (isSubscribed) setSecurityReport(data); })
+              .catch(console.error);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchRepoData();
+
+    // Poll every 1.5 seconds if processing
+    const interval = setInterval(() => {
+      fetchRepoData();
+    }, 1500);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
   }, [id]);
 
   useEffect(() => {
@@ -240,6 +262,41 @@ export default function RepositoryWorkspacePage() {
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {/* Live Progress Bar Banner (Shows when status != READY) */}
+            {repo && repo.status !== 'READY' && (
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-darkCard border border-indigo-500/30 glass-panel space-y-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        Cloning Repository & Ingesting Codebase...
+                        <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
+                          {repo.progressPercentage || 0}%
+                        </span>
+                      </h3>
+                      <p className="text-xs text-gray-300 mt-0.5 font-mono">{repo.currentStepMessage || 'Processing repository files...'}</p>
+                    </div>
+                  </div>
+
+                  <span className="text-xs font-mono font-bold text-indigo-400 flex items-center gap-1.5 animate-pulse">
+                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                    Auto-Updating Status
+                  </span>
+                </div>
+
+                {/* Animated Progress Bar */}
+                <div className="w-full bg-darkBg/80 rounded-full h-2.5 overflow-hidden border border-darkBorder">
+                  <div
+                    className="bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 h-full rounded-full transition-all duration-500 shadow-lg shadow-indigo-500/50"
+                    style={{ width: `${Math.max(repo.progressPercentage || 5, 5)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel">
                 <span className="text-xs text-gray-400 font-semibold block mb-1">Total Indexed Files</span>
@@ -298,7 +355,7 @@ export default function RepositoryWorkspacePage() {
                       +{branchDiff.addedSymbols.length} Symbols Added
                     </span>
                     <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded">
-                      -{branchDiff.deletedSymbols.length} Symbols Deleted
+                      -{branchDiff.deletedSymbols.length} Symbols Removed
                     </span>
                   </div>
                 </div>
@@ -308,151 +365,103 @@ export default function RepositoryWorkspacePage() {
             {/* Architecture Overview */}
             {architecture && (
               <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Cpu className="w-5 h-5 text-indigo-400" />
-                  Architecture Summary
-                </h2>
-
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <span className="px-3 py-1 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
-                    {architecture.projectType}
-                  </span>
-                  <span className="px-3 py-1 rounded-lg bg-purple-600/10 border border-purple-500/20 text-purple-400 text-xs font-semibold">
-                    Pattern: {architecture.architecturePattern}
-                  </span>
-                  {architecture.frameworks?.map((f, idx) => (
-                    <span key={idx} className="px-3 py-1 rounded-lg bg-darkBg border border-darkBorder text-gray-300 text-xs font-mono">
-                      {f}
+                <div className="flex items-center justify-between border-b border-darkBorder pb-3">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-indigo-400" />
+                    Architecture Summary
+                  </h3>
+                  <div className="flex gap-2">
+                    <span className="px-3 py-1 rounded-lg bg-darkBg border border-darkBorder text-xs font-semibold text-indigo-400">
+                      {architecture.projectType}
                     </span>
-                  ))}
+                    <span className="px-3 py-1 rounded-lg bg-darkBg border border-darkBorder text-xs font-semibold text-purple-400">
+                      Pattern: {architecture.architecturePattern}
+                    </span>
+                    <span className="px-3 py-1 rounded-lg bg-darkBg border border-darkBorder text-xs font-semibold text-emerald-400">
+                      {architecture.languages[0] || 'TypeScript'}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="whitespace-pre-wrap text-sm text-gray-300 leading-relaxed font-sans bg-darkBg/60 p-4 rounded-xl border border-darkBorder">
+                <div className="prose prose-invert max-w-none text-xs text-gray-300 space-y-3 whitespace-pre-wrap leading-relaxed">
                   {architecture.overviewMarkdown}
                 </div>
               </div>
             )}
-
-            {/* File Explorer Inventory */}
-            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <FileCode className="w-5 h-5 text-purple-400" />
-                Repository File Inventory ({files.length})
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                {files.map((f) => (
-                  <div
-                    key={f.id}
-                    onClick={() => {
-                      setSelectedFilePath(f.filePath);
-                      setActiveTab('code');
-                    }}
-                    className="p-3 rounded-xl bg-darkBg border border-darkBorder hover:border-indigo-500/40 cursor-pointer transition-all flex items-center justify-between group"
-                  >
-                    <div className="truncate">
-                      <span className="font-mono text-xs text-gray-200 block truncate group-hover:text-indigo-400">
-                        {f.filePath}
-                      </span>
-                      <span className="text-[10px] text-gray-500">{f.language} • {f.lineCount} lines</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-indigo-400 shrink-0" />
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
         {/* TAB 2: ARCHITECTURE GRAPH */}
         {activeTab === 'graph' && (
-          <div>
-            {graphData ? (
-              <ArchitectureGraph
-                graphData={graphData}
-                onNodeClick={(path) => {
-                  setSelectedFilePath(path);
-                  setActiveTab('code');
-                }}
-              />
-            ) : (
-              <div className="p-12 text-center text-gray-400">Loading Dependency Graph...</div>
-            )}
-          </div>
+          <ArchitectureGraph
+            graphData={graphData}
+            onNodeClick={(path) => {
+              setSelectedFilePath(path);
+              setActiveTab('code');
+            }}
+          />
         )}
 
         {/* TAB 3: AI CODE CHAT */}
-        {activeTab === 'chat' && <ChatWindow repositoryId={id} files={files} />}
-
-        {/* TAB 4: API DOCS (OpenAPI 3.0 & Markdown) */}
-        {activeTab === 'docs' && (
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <FileText className="w-5 h-5 text-indigo-400" />
-                Auto-Generated OpenAPI & API Documentation
-              </h2>
-              <p className="text-xs text-gray-400">
-                Derived from AST route definitions, controller parameters, and type signatures across your codebase.
-              </p>
-
-              {apiDocs && (
-                <div className="space-y-6 pt-2">
-                  <div className="flex flex-wrap gap-2 text-xs font-mono">
-                    <span className="bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-lg">
-                      Version: {apiDocs.version}
-                    </span>
-                    <span className="bg-darkBg border border-darkBorder px-3 py-1 rounded-lg text-gray-300">
-                      Base URL: {apiDocs.baseUrl}
-                    </span>
-                    <span className="bg-purple-600/10 text-purple-400 border border-purple-500/20 px-3 py-1 rounded-lg">
-                      {apiDocs.endpoints.length} Endpoints Discovered
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-bold text-white">Discovered Endpoints</h3>
-                    <div className="space-y-2">
-                      {apiDocs.endpoints.map((ep, idx) => (
-                        <div key={idx} className="p-3 rounded-xl bg-darkBg border border-darkBorder flex items-center justify-between text-xs font-mono">
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`px-2.5 py-1 rounded font-bold uppercase text-[10px] ${
-                                ep.method === 'GET'
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                  : ep.method === 'POST'
-                                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              }`}
-                            >
-                              {ep.method}
-                            </span>
-                            <span className="text-white font-bold">{ep.path}</span>
-                          </div>
-
-                          <span className="text-gray-500">{ep.filePath}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-darkBg border border-darkBorder font-mono text-xs text-gray-300 overflow-x-auto max-h-96 whitespace-pre">
-                    {apiDocs.openApiJson}
-                  </div>
-                </div>
-              )}
-            </div>
+        {activeTab === 'chat' && (
+          <div className="h-[calc(100vh-140px)]">
+            <ChatWindow
+              repositoryId={id}
+              files={files}
+              selectedFile={selectedFilePath}
+            />
           </div>
         )}
 
-        {/* TAB 5: MONACO CODE VIEWER */}
+        {/* TAB 4: MONACO SOURCE CODE VIEWER */}
         {activeTab === 'code' && (
-          <MonacoViewer
-            filePath={selectedFilePath || 'Select a file'}
-            code={selectedFileCode}
-            files={files}
-            onSelectFile={(path) => setSelectedFilePath(path)}
-          />
+          <div className="h-[calc(100vh-140px)]">
+            <MonacoViewer
+              filePath={selectedFilePath || 'Select a file'}
+              files={files}
+              code={selectedFileCode}
+              onSelectFile={(path) => setSelectedFilePath(path)}
+            />
+          </div>
+        )}
+
+        {/* TAB 5: API DOCUMENTATION */}
+        {activeTab === 'docs' && apiDocs && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">OpenAPI 3.0 Auto-Generated Specification</span>
+                  <h2 className="text-xl font-bold text-white mt-1">{apiDocs.title} ({apiDocs.version})</h2>
+                </div>
+                <button
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(apiDocs.openApiSpec, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `openapi-spec-${id}.json`;
+                    a.click();
+                  }}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2"
+                >
+                  Download OpenAPI Spec ↗
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-300">{apiDocs.description}</p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-400" />
+                API Route Documentation
+              </h3>
+              <div className="prose prose-invert max-w-none text-xs text-gray-300 space-y-3 whitespace-pre-wrap leading-relaxed">
+                {apiDocs.markdownDocs}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* TAB 6: IMPACT ANALYSIS */}
@@ -574,113 +583,112 @@ export default function RepositoryWorkspacePage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Code className="w-5 h-5 text-indigo-400" />
-                  AI Automatic Source Code Editor
+                  AI Automatic Source Code Editor & Refactor Engine
                 </h2>
               </div>
-
               <p className="text-xs text-gray-400">
-                Describe a feature request or refactoring goal. The AI automatically edits the source code files directly on your local disk and displays a concise editing summary.
+                Describe any architectural change or refactoring goal in natural language. The AI will automatically rewrite source code files and save them directly to disk.
               </p>
 
-              <div className="flex gap-3">
-                <input
-                  type="text"
+              <div className="space-y-3">
+                <textarea
                   value={planGoalInput}
                   onChange={(e) => setPlanGoalInput(e.target.value)}
-                  placeholder="e.g., Replace JWT authentication with session cookie authentication"
-                  className="flex-1 bg-darkBg border border-darkBorder rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  placeholder="e.g., Replace JWT authentication in auth.ts with session cookie auth, add input validation to login endpoint, or add logging to error handlers"
+                  rows={3}
+                  className="w-full bg-darkBg border border-darkBorder rounded-xl p-3.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 />
-                <button
-                  onClick={handleRunPlanner}
-                  disabled={plannerLoading}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  {plannerLoading ? 'Editing Source Code...' : 'Apply AI Code Edits'}
-                </button>
+
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={handleRunPlanner}
+                    disabled={plannerLoading}
+                    className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2"
+                  >
+                    {plannerLoading ? 'Applying Code Changes Directly to Disk...' : 'Execute & Apply Code Edits Directly to Disk ⚡'}
+                  </button>
+                </div>
               </div>
             </div>
 
             {applyMessage && (
-              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 font-semibold flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-400" />
-                  {applyMessage}
-                </span>
-
-                <button
-                  onClick={handleCreatePR}
-                  disabled={prLoading}
-                  className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all"
-                >
-                  <GitPullRequest className="w-3.5 h-3.5" />
-                  {prLoading ? 'Creating PR...' : 'Create GitHub Pull Request'}
-                </button>
-              </div>
-            )}
-
-            {prResult && (
-              <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between text-xs text-purple-300">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-purple-400" />
-                  {prResult.message}
-                </span>
-                {prResult.prUrl && (
-                  <a href={prResult.prUrl} target="_blank" rel="noreferrer" className="underline font-bold text-white">
-                    Open PR on GitHub ↗
-                  </a>
-                )}
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                {applyMessage}
               </div>
             )}
 
             {changePlan && (
               <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-6">
-                <div className="flex items-center justify-between border-b border-darkBorder pb-4">
+                <div className="flex items-center justify-between pb-4 border-b border-darkBorder">
                   <div>
-                    <span className="text-[11px] text-gray-400 uppercase font-semibold">Refactoring Goal</span>
-                    <h3 className="text-lg font-bold text-white">{changePlan.goal}</h3>
+                    <span className="text-xs font-semibold text-indigo-400 uppercase">Automated Change Summary</span>
+                    <h3 className="text-lg font-bold text-white mt-0.5">{changePlan.goal}</h3>
                   </div>
 
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
-                    ✓ Applied to {changePlan.affectedFiles?.length || 0} Files
-                  </span>
+                  <button
+                    onClick={handleCreatePR}
+                    disabled={prLoading}
+                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/20 transition-all flex items-center gap-2"
+                  >
+                    <GitPullRequest className="w-4 h-4" />
+                    {prLoading ? 'Submitting PR to GitHub...' : 'Submit 1-Click Pull Request to GitHub ↗'}
+                  </button>
                 </div>
 
-                {/* Short Message Summary of Edits */}
-                <div className="p-4 rounded-xl bg-darkBg border border-darkBorder space-y-3">
-                  <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Summary of Applied Code Modifications</h4>
-                  <div className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">
+                {prResult && (
+                  <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-2">
+                    <h4 className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                      <Check className="w-4 h-4" />
+                      Pull Request Created Successfully!
+                    </h4>
+                    <p className="text-xs text-gray-300">
+                      Branch: <code className="text-indigo-300">{prResult.branchName}</code>
+                    </p>
+                    <a
+                      href={prResult.prUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-purple-400 font-bold hover:underline"
+                    >
+                      View Live PR on GitHub ↗
+                    </a>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-gray-300 uppercase">Code Refactoring Report</h4>
+                  <div className="p-4 rounded-xl bg-darkBg border border-darkBorder text-xs text-gray-300 leading-relaxed whitespace-pre-wrap font-mono">
                     {changePlan.summary}
                   </div>
                 </div>
 
-                {/* Updated Files List */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Modified Repository Files (Click any file to view updated code)
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-xs font-bold text-gray-300 uppercase">
+                    Modified Codebase Files ({changePlan.proposals?.length || 0})
                   </h4>
-                  <div className="grid grid-cols-1 gap-2">
-                    {changePlan.affectedFiles?.map((file, idx) => (
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {changePlan.proposals?.map((prop, idx) => (
                       <div
                         key={idx}
                         onClick={() => {
-                          setSelectedFilePath(file);
+                          setSelectedFilePath(prop.filePath);
                           setActiveTab('code');
                         }}
-                        className="p-3.5 rounded-xl bg-darkBg border border-darkBorder hover:border-indigo-500/50 cursor-pointer transition-all flex items-center justify-between text-xs font-mono group"
+                        className="p-4 rounded-xl bg-darkBg border border-darkBorder hover:border-indigo-500/50 cursor-pointer transition-all flex items-center justify-between group"
                       >
-                        <div className="flex items-center gap-2.5 truncate">
-                          <FileCode className="w-4 h-4 text-indigo-400 shrink-0" />
-                          <span className="text-white font-semibold truncate group-hover:text-indigo-300">{file}</span>
+                        <div className="flex items-center gap-3 truncate">
+                          <FileCode className="w-5 h-5 text-indigo-400 shrink-0" />
+                          <div className="truncate">
+                            <h5 className="text-xs font-bold text-white truncate group-hover:text-indigo-300">
+                              {prop.filePath.split('/').pop()}
+                            </h5>
+                            <p className="text-[11px] text-gray-400 truncate">{prop.filePath}</p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/20">
-                            Updated on Disk
-                          </span>
-                          <span className="text-[11px] text-indigo-400 font-sans font-semibold group-hover:underline flex items-center gap-1">
-                            View Edited Code ↗
-                          </span>
-                        </div>
+                        <span className="text-[11px] text-indigo-400 font-semibold group-hover:underline shrink-0">
+                          View Edited Code ↗
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -691,73 +699,95 @@ export default function RepositoryWorkspacePage() {
         )}
 
         {/* TAB 8: HEALTH AUDIT */}
-        {activeTab === 'health' && (
+        {activeTab === 'health' && healthReport && (
           <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                  Repository Health Audit
-                </h2>
-                <p className="text-xs text-gray-400 mt-1">{healthReport?.summary}</p>
-              </div>
+            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wider">Holistic Code Quality & Maintainability</span>
+                  <h2 className="text-xl font-bold text-white mt-1">Repository Health Audit Report</h2>
+                </div>
 
-              <div className="text-right">
-                <span className="text-xs text-gray-400 block">Overall Health Score</span>
-                <span className="text-3xl font-extrabold text-emerald-400">{healthReport?.score || 95}/100</span>
+                <div className="flex items-center gap-3 bg-darkBg px-5 py-3 rounded-2xl border border-darkBorder">
+                  <span className="text-xs text-gray-400 font-semibold">Health Score:</span>
+                  <span className="text-3xl font-extrabold text-emerald-400">{healthReport.score}/100</span>
+                </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {healthReport.metrics?.map((m, idx) => (
+                <div key={idx} className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-white">{m.category}</h3>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                        m.status === 'good'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : m.status === 'warning'
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      }`}
+                    >
+                      {m.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300">{m.observation}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
         {/* TAB 9: SECURITY AUDIT */}
-        {activeTab === 'security' && (
+        {activeTab === 'security' && securityReport && (
           <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-cyan-400" />
-                  AI Security & Vulnerability Auditor
-                </h2>
-                <p className="text-xs text-gray-400 mt-1">{securityReport?.summary}</p>
-              </div>
+            <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-rose-400 font-semibold uppercase tracking-wider">Automated AI Vulnerability Scanner</span>
+                  <h2 className="text-xl font-bold text-white mt-1">Security & Secret Exposure Audit</h2>
+                </div>
 
-              <div className="text-right">
-                <span className="text-xs text-gray-400 block">Security Grade</span>
-                <span className="text-4xl font-extrabold text-cyan-400">{securityReport?.grade || 'A+'}</span>
+                <div className="flex items-center gap-3 bg-darkBg px-5 py-3 rounded-2xl border border-darkBorder">
+                  <span className="text-xs text-gray-400 font-semibold">Security Grade:</span>
+                  <span className="text-3xl font-extrabold text-cyan-400">{securityReport.grade}</span>
+                </div>
               </div>
             </div>
 
-            {securityReport && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold text-white">Discovered Vulnerabilities ({securityReport.vulnerabilities.length})</h3>
-
-                {securityReport.vulnerabilities.length === 0 ? (
-                  <div className="p-6 rounded-2xl bg-darkCard border border-darkBorder text-center text-gray-400 text-xs">
-                    ✅ No critical security vulnerabilities or hardcoded secrets detected.
-                  </div>
-                ) : (
-                  securityReport.vulnerabilities.map((v) => (
-                    <div key={v.id} className="p-4 rounded-xl bg-darkCard border border-darkBorder space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-white text-sm flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-rose-400" />
-                          {v.title}
-                        </span>
-                        <span className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                          {v.severity}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-300 font-mono">{v.filePath} {v.line && `(Line ${v.line})`}</p>
-                      <p className="text-xs text-gray-400">{v.description}</p>
-                      <div className="p-2.5 rounded bg-darkBg border border-darkBorder text-[11px] font-mono text-emerald-400">
-                        💡 Recommendation: {v.recommendation}
-                      </div>
+            <div className="space-y-4">
+              {(securityReport.findings || securityReport.vulnerabilities || []).map((f) => (
+                <div
+                  key={f.id}
+                  className="p-5 rounded-2xl bg-darkCard border border-darkBorder glass-panel space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <ShieldAlert className="w-5 h-5 text-rose-400" />
+                      <h3 className="text-sm font-bold text-white">{f.title}</h3>
                     </div>
-                  ))
-                )}
-              </div>
-            )}
+
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                        f.severity === 'CRITICAL' || f.severity === 'HIGH'
+                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          : f.severity === 'MEDIUM'
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      }`}
+                    >
+                      {f.severity}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-gray-300">{f.description}</p>
+                  <div className="p-3 rounded-xl bg-darkBg border border-darkBorder text-xs text-indigo-300 font-mono">
+                    💡 Recommended Fix: {f.remediation}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>
